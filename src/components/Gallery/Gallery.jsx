@@ -1,118 +1,108 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { searchGallery } from '../../shared/services/gallery';
 import ImageGallery from '../ImageGallery';
 import Button from '../Button';
 import Loader from '../Loader';
 import Searchbar from '../Searchbar';
-import { PER_PAGE } from '../../shared/variables/variables';
 import Modal from '../Modal';
 import style from './gallery.module.css';
 
-class Gallery extends Component {
-  state = {
-    data: { gallery: [], totalPages: 1,  error: null },
-    loading: false,
-    search: '',
-    page: 1,
-    modal: {
+const PER_PAGE = 12;
+const Gallery = () => {
+const [data, setData] = useState({ gallery: [], totalPages: 1, error: null });
+const [loading, setLoading] = useState(false);
+const [search, setSearch] = useState('');
+const [page, setPage] = useState(1);
+const [modal, setModal] = useState({
+  open: false,
+  content: null,
+});
+
+const fetchGallery = async () => {
+  try {
+    const { hits, totalHits } = await searchGallery(page, search);
+    setData(prevState => {
+      return {
+        gallery: [...prevState.gallery, ...hits],
+        totalPages: Math.max(Math.ceil(totalHits / PER_PAGE), 1),
+        error: null,
+      };
+    });
+    setLoading(false);
+  } catch (error) {
+    setData(prevState => {
+      return {
+        ...prevState,
+        error: error.message,
+      };
+    });
+    setLoading(false);
+  }
+};
+
+const changeSearch = (search ) => {
+  setSearch(search);
+  setPage(1);
+  setData({ gallery: [], totalPages: 1, error: null });
+};
+
+const loadMore = () =>
+  setPage(prevState => 
+    prevState + 1
+  );
+
+const openModal = content => {
+  setModal({
+      open: true,
+      content,
+    }
+  );
+};
+
+const closeModal = () => {
+  setModal({
       open: false,
       content: null,
-    },
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    const { search, page } = this.state;
-    if (prevState.search !== search || prevState.page !== page) {
-      if (search) {
-        this.fetchGallery();
-        this.setState({loading: true });
-      }
     }
+  );
+};
+
+useEffect(() => {
+  if (search) {
+    fetchGallery();
+    setLoading(true);
   }
+}, [search, page]);
 
-  fetchGallery = async () => {
-    const { page, search } = this.state;
-    try {
-      const { hits, totalHits } = await searchGallery(page, search);
-      this.setState(prevState => {  
-          return {
-            data: {
-              gallery: [...prevState.data.gallery, ...hits],
-              totalPages: Math.max(Math.ceil(totalHits / PER_PAGE), 1),             
-              error: null,
-            },
-            loading: false,
-          };
-      });
-    } catch (error) {
-      this.setState(prevState => {
-        return {
-          data: {
-            ...prevState.data,            
-            error: error.message,
-          },
-          loading: false,
-        };
-      });
-    }
-  };
 
-  changeSearch = ({ search }) => {
-    this.setState({ search, page: 1, data: { gallery: [], totalPages: 1,  error: null }                                                       })
-  };
+  const { error, gallery, totalPages } = data;
 
-  loadMore = () =>
-    this.setState(prevState => {
-      return { page: prevState.page + 1 };
-    });
+  return (
+    <>
+      <Searchbar onSubmit={changeSearch} />
+      {error && <p>Ошибка поиска</p>}
+      {!gallery.length && search && !loading && !error && (
+        <p>Ничего не найдено</p>
+      )}
+      {loading && <Loader />}
+      <ImageGallery openModal={openModal} gallery={gallery} />
 
-  openModal = content => {
-    this.setState({
-      modal: {
-        open: true,
-        content,
-      },
-    });
-  };
-
-  closeModal = () => {
-    this.setState({
-      modal: {
-        open: false,
-        content: null,
-      },
-    });
-  };
-  render() {
-    const { error, gallery, totalPages } = this.state.data;
-    const { modal, search, page, loading } = this.state;
-    return (
-      <>        
-        <Searchbar onSubmit={this.changeSearch} />
-        {error && <p>Ошибка поиска</p>}
-        {!gallery.length && search && !loading && !error && (
-          <p>Ничего не найдено</p>
-        )}
-        {loading && <Loader />}
-        <ImageGallery openModal={this.openModal} gallery={gallery} />
-
-        {modal.open && (
-          <Modal handleClose={this.closeModal}>
-            <div className={style.modal}>
-              <img
-                className={style.image}
-                src={modal.content.largeImageURL}
-                alt={modal.content.tags}
-              />
-            </div>
-          </Modal>
-        )}
-        {Boolean(gallery.length) && totalPages > page && (
-          <Button loadMore={this.loadMore} label = 'Load more' />
-        )}
-      </>
-    );
-  }
-}
+      {modal.open && (
+        <Modal handleClose={closeModal}>
+          <div className={style.modal}>
+            <img
+              className={style.image}
+              src={modal.content.largeImageURL}
+              alt={modal.content.tags}
+            />
+          </div>
+        </Modal>
+      )}
+      {Boolean(gallery.length) && totalPages > page && (
+        <Button loadMore={loadMore} label="Load more" />
+      )}
+    </>
+  );
+};
 
 export default Gallery;

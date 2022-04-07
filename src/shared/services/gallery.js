@@ -1,6 +1,6 @@
 import axios from "axios";
-import {PER_PAGE} from '../variables//variables'
 
+const PER_PAGE = 12;
 const instance = axios.create({
     baseURL: "https://pixabay.com/api",
     params: {
