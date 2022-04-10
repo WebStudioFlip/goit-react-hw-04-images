@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { searchGallery } from '../../shared/services/gallery';
 import ImageGallery from '../ImageGallery';
 import Button from '../Button';
@@ -9,8 +9,7 @@ import style from './gallery.module.css';
 
 const PER_PAGE = 12;
 const Gallery = () => {
-const [data, setData] = useState({ gallery: [], totalPages: 1, error: null });
-const [loading, setLoading] = useState(false);
+const [data, setData] = useState({ gallery: [], totalPages: 1, error: null, loading : false });
 const [search, setSearch] = useState('');
 const [page, setPage] = useState(1);
 const [modal, setModal] = useState({
@@ -18,27 +17,35 @@ const [modal, setModal] = useState({
   content: null,
 });
 
-const fetchGallery = async () => {
-  try {
-    const { hits, totalHits } = await searchGallery(page, search);
-    setData(prevState => {
+const fetchGallery = useCallback(
+  async () => {
+    setData(prevData => {
       return {
-        gallery: [...prevState.gallery, ...hits],
-        totalPages: Math.max(Math.ceil(totalHits / PER_PAGE), 1),
-        error: null,
-      };
-    });
-    setLoading(false);
-  } catch (error) {
-    setData(prevState => {
-      return {
-        ...prevState,
-        error: error.message,
-      };
-    });
-    setLoading(false);
-  }
-};
+        ...prevData,
+        loading : true
+      }
+    })
+    try {
+      const { hits, totalHits } = await searchGallery(page, search);
+      setData(prevState => {
+        return {
+          gallery: [...prevState.gallery, ...hits],
+          totalPages: Math.max(Math.ceil(totalHits / PER_PAGE), 1),
+          error: null,
+          loading: false
+        };
+      });   
+    } catch (error) {
+      setData(prevState => {
+        return {
+          ...prevState,
+          error: error.message,
+          loading : false
+        };
+      });    
+    }
+  }, [page, search]
+) 
 
 const changeSearch = (search ) => {
   setSearch(search);
@@ -69,13 +76,12 @@ const closeModal = () => {
 
 useEffect(() => {
   if (search) {
-    fetchGallery();
-    setLoading(true);
+    fetchGallery();   
   }
-}, [search, page]);
+}, [search, page, fetchGallery]);
 
 
-  const { error, gallery, totalPages } = data;
+  const { error, gallery, totalPages, loading } = data;
 
   return (
     <>
