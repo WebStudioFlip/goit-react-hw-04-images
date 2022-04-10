@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import style from './modal.module.css';
@@ -6,7 +6,7 @@ import style from './modal.module.css';
 const modalRoot = document.getElementById('modal-root');
 
 const Modal = ({ handleClose, children }) => {
-  const close = useCallback(
+  const close = useCallback (
     e => {
         console.log(e)
       if (e.code === 'Escape') {
@@ -16,13 +16,15 @@ const Modal = ({ handleClose, children }) => {
         handleClose();
       }
     }, [handleClose]
-  ) 
+  )
+    
 
   useEffect(() => {
-      console.log("first render")
+      
     document.addEventListener('keydown', close);
-   // return document.removeEventListener('keydown', close);
-  }, [close]);
+   return () => document.removeEventListener('keydown', close);
+       
+  }, []);
 
   return createPortal(
     <div onClick={close} className={style.overlay}>
@@ -37,7 +39,7 @@ const Modal = ({ handleClose, children }) => {
   );
 };
 
-export default Modal;
+export default memo(Modal);
 
 Modal.propTypes = {
   handleClose: PropTypes.func.isRequired,
